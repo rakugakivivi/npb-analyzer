@@ -506,8 +506,17 @@ const BASE_AVG = {
 };
 const BASE_AVG_BASELINE = 0.252; // league avg (no runner adjustment baseline)
 
+// RISP sample sizes (AB) - fallback to normal if < 30
+const RISP_SAMPLE = {
+  '0-0':891,'1-0':370,'0-1':419,'1-1':393,
+  '2-0':103,'0-2':150,'2-1':189,'1-2':259,
+  '3-0':18,'2-2':202,'3-1':56,'3-2':95
+};
 function getRispAvg(countKey) {
-  return RISP_AVG_DATA[countKey] || AVG_DATA[countKey];
+  if (RISP_SAMPLE[countKey] && RISP_SAMPLE[countKey] >= 30) {
+    return RISP_AVG_DATA[countKey];
+  }
+  return AVG_DATA[countKey]; // fallback to normal avg
 }
 
 const SLG_DATA = {
