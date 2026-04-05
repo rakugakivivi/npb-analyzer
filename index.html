@@ -435,27 +435,7 @@
 <div style="max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
 
   <!-- RISP info card -->
-  <div class="card">
-    <div class="card-title">得点圏打率 RISP（2025年セリーグ通年データ (nf3.sakura.ne.jp)）</div>
-    <p style="font-size:0.72rem;color:#888;margin-bottom:12px;">
-      2塁 or 3塁にランナーがいるとき「得点圏打率」を自動表示。<br>
-      打率表示の左バッジが <span style="color:#f48fb1;font-weight:bold;">得点圏打率</span> に切り替わります。
-    </p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>選手名</th>
-            <th>チーム</th>
-            <th>通常打率</th>
-            <th>得点圏打率</th>
-            <th>差分</th>
-          </tr>
-        </thead>
-        <tbody id="rispTable"></tbody>
-      </table>
-    </div>
-  </div>
+  <!-- 選手別テーブル削除済み -->
 
   <!-- Count AVG/SLG table -->
   <div class="card">
@@ -662,9 +642,8 @@ function switchTab(name) {
 
 // ===== BUILD TABLES =====
 // 2025年セリーグ通年データ (nf3.sakura.ne.jp)
-const RISP_PLAYERS = [
-  {name:"森下 翔太", team:"阪神",    avg:0.387, risp:0.273},
-  {name:"佐藤 輝明", team:"阪神",    avg:0.364, risp:0.571},
+const RISP_PLAYERS = []; // removed
+/*
   {name:"キャベッジ",team:"巨人",    avg:0.364, risp:0.400},
   {name:"牧 秀悟",  team:"DeNA",    avg:0.357, risp:0.000},
   {name:"福永 裕基", team:"中日",    avg:0.333, risp:0.333},
@@ -694,7 +673,7 @@ const RISP_PLAYERS = [
   {name:"大山 悠輔", team:"阪神",    avg:0.160, risp:0.000},
   {name:"サノー",   team:"中日",    avg:0.107, risp:0.125},
   {name:"中村 奨成", team:"広島",    avg:0.074, risp:0.000}
-];
+]; */
 
 function fmtAvg(v) {
   if (v === 0) return '.000';
