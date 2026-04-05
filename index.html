@@ -409,18 +409,18 @@
       </div>
     </div>
     <div class="gauge-wrap">
-      <div class="gauge-label">得点期待値 (max 2.25)</div>
+      <div class="gauge-label">得点期待値 (max 3.00)</div>
       <div class="gauge-bar-bg">
         <div class="gauge-bar-fill re-fill" id="reGauge" style="width:0%"></div>
       </div>
-      <div class="gauge-label" id="avgGaugeLabel">打率 AVG (max .400)</div>
+      <div class="gauge-label" id="avgGaugeLabel">打率 AVG (max .500)</div>
       <div class="gauge-bar-bg">
         <div class="gauge-bar-fill avg-fill" id="avgGauge" style="width:0%"></div>
       </div>
       <div class="risp-diff-row" id="rispDiffRow" style="display:none">
         通常打率 <span id="rispNormalVal"></span> → 得点圏打率 <span id="rispVal"></span> (差分: <span id="rispDiff"></span>)
       </div>
-      <div class="gauge-label">長打率 SLG (max .700)</div>
+      <div class="gauge-label">長打率 SLG (max .800)</div>
       <div class="gauge-bar-bg">
         <div class="gauge-bar-fill slg-fill" id="slgGauge" style="width:0%"></div>
       </div>
@@ -611,7 +611,7 @@ function updateUI() {
   if (isRISP) {
     badge.textContent = '得点圏打率';
     badge.className = 'avg-mode-badge badge-risp';
-    document.getElementById('avgGaugeLabel').textContent = '得点圏打率 RISP (max .400)';
+    document.getElementById('avgGaugeLabel').textContent = '得点圏打率 RISP (max .500)';
     document.getElementById('rispDiffRow').style.display = 'flex';
     document.getElementById('rispNormalVal').textContent = '.' + Math.round(normalAvg * 1000).toString().padStart(3, '0');
     document.getElementById('rispVal').textContent = '.' + Math.round(rispAvg * 1000).toString().padStart(3, '0');
@@ -620,14 +620,14 @@ function updateUI() {
   } else {
     badge.textContent = '通常打率';
     badge.className = 'avg-mode-badge badge-normal';
-    document.getElementById('avgGaugeLabel').textContent = '打率 AVG (max .400)';
+    document.getElementById('avgGaugeLabel').textContent = '打率 AVG (max .500)';
     document.getElementById('rispDiffRow').style.display = 'none';
   }
 
   // Gauges
-  document.getElementById('reGauge').style.width = Math.min((re / 2.25) * 100, 100) + '%';
-  document.getElementById('avgGauge').style.width = Math.min((avg / 0.400) * 100, 100) + '%';
-  document.getElementById('slgGauge').style.width = Math.min((slg / 0.700) * 100, 100) + '%';
+  document.getElementById('reGauge').style.width = Math.min((re / 3.00) * 100, 100) + '%';
+  document.getElementById('avgGauge').style.width = Math.min((avg / 0.500) * 100, 100) + '%';
+  document.getElementById('slgGauge').style.width = Math.min((slg / 0.800) * 100, 100) + '%';
 
   // Status text
   const outLabels = ['ノーアウト', '1アウト', '2アウト'];
@@ -765,7 +765,7 @@ function buildREMatrix() {
     '123': '123 満塁'
   };
   const tbody = document.getElementById('reMatrix');
-  const maxRE = 2.25;
+  const maxRE = 3.00;
   baseOrder.forEach(key => {
     const vals = RE_DATA[key];
     const tr = document.createElement('tr');
