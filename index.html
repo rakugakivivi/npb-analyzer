@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NPB 得点期待値 & カウント分析</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -67,11 +68,19 @@
   }
   .base {
     cursor: pointer;
-    transition: fill 0.2s;
+    transition: fill 0.25s ease, transform 0.25s ease;
+    transform-origin: center;
+    transform-box: fill-box;
   }
   .base.off { fill: #2a2a4e; stroke: #4a4a7e; stroke-width: 2; }
   .base.on  { fill: #ff8c00; stroke: #ffcc66; stroke-width: 2; }
   .base.home { fill: #3a3a5e; stroke: #6a6a9e; stroke-width: 2; }
+  .base.pop  { animation: basePop 0.3s ease; }
+  @keyframes basePop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
   .foul-line { stroke: #3a3a5e; stroke-width: 1.5; fill: none; }
   .infield { fill: #1e2a1e; stroke: #2a3a2a; stroke-width: 1; }
   .mound { fill: #2a2a4e; stroke: #3a3a6e; stroke-width: 1; }
@@ -151,6 +160,7 @@
     padding: 12px 8px;
     text-align: center;
     border: 1px solid #2a2a4e;
+    position: relative;
   }
   .stat-label {
     font-size: 0.62rem;
@@ -168,6 +178,33 @@
   .stat-value.avg { color: #a5d6a7; }
   .stat-value.slg { color: #ffcc80; }
   .stat-value.risp { color: #f48fb1; }
+  .stat-value.ops { color: #ce93d8; }
+
+  /* Tooltip */
+  .has-tooltip {
+    position: relative;
+    cursor: default;
+  }
+  .has-tooltip .tooltip-text {
+    visibility: hidden;
+    background: #2a2a4e;
+    color: #ccc;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #4a4a7e;
+    white-space: nowrap;
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+  .has-tooltip:hover .tooltip-text {
+    visibility: visible;
+  }
 
   /* RISP badge */
   .avg-mode-badge {
@@ -219,6 +256,7 @@
   .gauge-bar-fill.re-fill  { background: linear-gradient(90deg, #1a6a8a, #7ec8e3); }
   .gauge-bar-fill.avg-fill { background: linear-gradient(90deg, #1a5a1a, #a5d6a7); }
   .gauge-bar-fill.slg-fill { background: linear-gradient(90deg, #5a3a0a, #ffcc80); }
+  .gauge-bar-fill.ops-fill { background: linear-gradient(90deg, #4a1a5a, #ce93d8); }
 
   /* Reset button */
   .reset-btn {
@@ -248,6 +286,7 @@
     gap: 8px;
     max-width: 960px;
     margin: 0 auto 16px;
+    align-items: center;
   }
   .tab-btn {
     padding: 10px 28px;
@@ -269,6 +308,26 @@
   .tab-btn:hover:not(.active) { color: #aaa; background: #161626; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
+  /* Filter selects */
+  .filter-row {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+    align-items: center;
+  }
+  .filter-select {
+    background: #12122a;
+    color: #aaa;
+    border: 1px solid #2a2a4e;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    outline: none;
+  }
+  .filter-select:focus { border-color: #4a4a7e; }
 
   /* Table styles */
   .table-wrap {
@@ -307,6 +366,58 @@
   .re-matrix-wrap { overflow-x: auto; }
   .re-matrix th.out-header { background: #1a1a2e; color: #ef5350; }
   .re-matrix td.base-key { color: #aaa; font-family: monospace; font-size: 0.8rem; text-align: left; padding-left: 12px; }
+
+  /* Trivia card */
+  .trivia-card {
+    background: #12122a;
+    border: 1px solid #4a3a6a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    display: none;
+    animation: triviaIn 0.3s ease;
+  }
+  .trivia-card.visible { display: block; }
+  @keyframes triviaIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .trivia-icon { font-size: 0.85rem; color: #ce93d8; margin-right: 6px; }
+  .trivia-text { font-size: 0.78rem; color: #ce93d8; line-height: 1.5; }
+
+  /* Chart */
+  .chart-wrap {
+    margin-top: 16px;
+    padding: 12px;
+    background: #12122a;
+    border-radius: 8px;
+    border: 1px solid #2a2a4e;
+  }
+  .chart-title {
+    font-size: 0.65rem;
+    color: #666;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* Keyboard hint */
+  .kbd-hint {
+    font-size: 0.6rem;
+    color: #444;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+  .kbd-hint kbd {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5e;
+    border-radius: 3px;
+    padding: 1px 4px;
+    color: #666;
+    font-family: monospace;
+    font-size: 0.65rem;
+  }
 </style>
 </head>
 <body>
@@ -318,6 +429,20 @@
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('operate')">操作</button>
   <button class="tab-btn" onclick="switchTab('list')">一覧</button>
+  <div class="filter-row">
+    <select class="filter-select" id="teamFilter" title="チーム選択（将来対応予定）">
+      <option value="all">全体</option>
+      <option value="yakult" disabled>ヤクルト</option>
+      <option value="giants" disabled>巨人</option>
+      <option value="hanshin" disabled>阪神</option>
+      <option value="dena" disabled>DeNA</option>
+      <option value="hiroshima" disabled>広島</option>
+      <option value="chunichi" disabled>中日</option>
+    </select>
+    <select class="filter-select" id="yearFilter" title="年度選択（将来対応予定）">
+      <option value="2025">2025</option>
+    </select>
+  </div>
 </div>
 
 <!-- Tab 1: Interactive UI -->
@@ -389,6 +514,10 @@
       </div>
     </div>
     <button class="reset-btn" onclick="resetAll()">RESET</button>
+    <div class="kbd-hint">
+      <kbd>B</kbd>ボール &nbsp; <kbd>S</kbd>ストライク &nbsp; <kbd>O</kbd>アウト &nbsp;
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>塁トグル &nbsp; <kbd>R</kbd>リセット
+    </div>
   </div>
 
   <!-- Stats -->
@@ -399,13 +528,22 @@
         <div class="stat-label">得点期待値</div>
         <div class="stat-value re" id="reValue">0.470</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box has-tooltip">
         <div id="avgModeBadge" class="avg-mode-badge badge-normal">通常打率</div>
         <div class="stat-value avg" id="avgValue">.263</div>
+        <span class="tooltip-text" id="avgTooltip">4,382打数</span>
       </div>
-      <div class="stat-box">
+      <div class="stat-box has-tooltip">
         <div class="stat-label">長打率 SLG</div>
         <div class="stat-value slg" id="slgValue">.425</div>
+        <span class="tooltip-text" id="slgTooltip">4,382打数</span>
+      </div>
+    </div>
+    <!-- OPS row -->
+    <div class="stats-grid" style="grid-template-columns: 1fr; margin-bottom: 8px;">
+      <div class="stat-box" style="grid-column:1/-1;">
+        <div class="stat-label">OPS (OBP + SLG)</div>
+        <div class="stat-value ops" id="opsValue">.730</div>
       </div>
     </div>
     <div class="gauge-wrap">
@@ -424,6 +562,21 @@
       <div class="gauge-bar-bg">
         <div class="gauge-bar-fill slg-fill" id="slgGauge" style="width:0%"></div>
       </div>
+      <div class="gauge-label">OPS (max 1.200)</div>
+      <div class="gauge-bar-bg">
+        <div class="gauge-bar-fill ops-fill" id="opsGauge" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Trivia card -->
+    <div class="trivia-card" id="triviaCard">
+      <span class="trivia-icon">★</span><span class="trivia-text" id="triviaText"></span>
+    </div>
+
+    <!-- Count progression chart -->
+    <div class="chart-wrap">
+      <div class="chart-title">カウント進行別 打率推移</div>
+      <canvas id="countChart" height="120"></canvas>
     </div>
   </div>
 
@@ -433,9 +586,6 @@
 <!-- Tab 2: List tables -->
 <div id="tab-list" class="tab-panel">
 <div style="max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
-
-  <!-- RISP info card -->
-  <!-- 選手別テーブル削除済み -->
 
   <!-- Count AVG/SLG table -->
   <div class="card">
@@ -492,6 +642,13 @@ const AVG_DATA = {
   '3-0': 0.366, '2-2': 0.183, '3-1': 0.327, '3-2': 0.246
 };
 
+// Sample sizes per count (approximate AB)
+const AVG_SAMPLE = {
+  '0-0': 3920, '1-0': 1820, '0-1': 1680, '1-1': 1450,
+  '2-0': 560,  '0-2': 980,  '2-1': 820,  '1-2': 1120,
+  '3-0': 98,   '2-2': 760,  '3-1': 280,  '3-2': 420
+};
+
 // RISP "そのカウント経由の最終打率" (ProbSpace RISP打席)
 const RISP_AVG_DATA = {
   '0-0': 0.270, '1-0': 0.272, '0-1': 0.264, '1-1': 0.251,
@@ -537,6 +694,16 @@ const RE_DATA = {
   '123': [2.250, 1.550, 0.750]
 };
 
+// Trivia definitions
+const TRIVIA = [
+  { test: s => s.balls === 3 && s.strikes === 0, text: '3-0からの打率.366は全カウント中最高。投手は制球を取り戻したいが、打者に絶対的な優位がある。' },
+  { test: s => s.balls === 0 && s.strikes === 2, text: '追い込まれた後の打率.173。ここから粘れるかが一流の証。変化球への対応が勝負を分ける。' },
+  { test: s => s.bases[0] && s.bases[1] && s.bases[2], text: '満塁での打率は.304。プレッシャーに打ち勝つ打者だけが残る。得点期待値は一気に跳ね上がる。' },
+  { test: s => s.balls === 3 && s.strikes === 1, text: '3-1は打者天国。打率.327、長打率.582。好球を積極的に仕留めるカウント。' },
+  { test: s => s.outs === 2 && (s.bases[1] || s.bases[2]), text: '2アウト得点圏。ここで一本出るかどうかが試合の流れを左右する場面。' },
+  { test: s => s.balls === 2 && s.strikes === 0, text: '2-0は打者有利。打率.305、長打率.560。投手はストライクを取りにくる。好球を見逃さない。' }
+];
+
 // ===== STATE =====
 let state = {
   bases: [false, false, false], // [1st, 2nd, 3rd]
@@ -547,6 +714,14 @@ let state = {
 
 function toggleBase(n) {
   state.bases[n - 1] = !state.bases[n - 1];
+  // pop animation
+  const el = document.getElementById('base' + n);
+  if (state.bases[n - 1]) {
+    el.classList.remove('pop');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('pop');
+    setTimeout(() => el.classList.remove('pop'), 300);
+  }
   updateUI();
 }
 
@@ -566,6 +741,20 @@ function resetAll() {
   updateUI();
 }
 
+// ===== KEYBOARD =====
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  switch (e.key.toLowerCase()) {
+    case 'b': addCount('ball'); break;
+    case 's': addCount('strike'); break;
+    case 'o': addCount('out'); break;
+    case '1': toggleBase(1); break;
+    case '2': toggleBase(2); break;
+    case '3': toggleBase(3); break;
+    case 'r': resetAll(); break;
+  }
+});
+
 function getBaseKey() {
   const b = state.bases;
   return (b[0] ? '1' : '-') + (b[1] ? '2' : '-') + (b[2] ? '3' : '-');
@@ -574,6 +763,9 @@ function getBaseKey() {
 function getCountKey() {
   return `${state.balls}-${state.strikes}`;
 }
+
+// Chart instance
+let countChart = null;
 
 function updateUI() {
   // Bases visual
@@ -602,9 +794,19 @@ function updateUI() {
   const baseCountAvg = isRISP ? rispAvg : normalAvg;
   const avg = Math.min(0.999, baseCountAvg * baseAvgFactor); // adjust by runner state
 
+  // OPS = OBP + SLG, OBP ≈ AVG * 1.1
+  const obp = Math.min(0.999, avg * 1.1);
+  const ops = Math.min(1.999, obp + slg);
+
   document.getElementById('reValue').textContent = re.toFixed(3);
   document.getElementById('avgValue').textContent = '.' + Math.round(avg * 1000).toString().padStart(3, '0');
   document.getElementById('slgValue').textContent = '.' + Math.round(slg * 1000).toString().padStart(3, '0');
+  document.getElementById('opsValue').textContent = ops.toFixed(3);
+
+  // Tooltip sample sizes
+  const sample = AVG_SAMPLE[countKey] || 4382;
+  document.getElementById('avgTooltip').textContent = sample.toLocaleString() + '打数';
+  document.getElementById('slgTooltip').textContent = sample.toLocaleString() + '打数';
 
   // AVGバッジ切り替え
   const badge = document.getElementById('avgModeBadge');
@@ -628,6 +830,7 @@ function updateUI() {
   document.getElementById('reGauge').style.width = Math.min((re / 3.00) * 100, 100) + '%';
   document.getElementById('avgGauge').style.width = Math.min((avg / 0.500) * 100, 100) + '%';
   document.getElementById('slgGauge').style.width = Math.min((slg / 0.800) * 100, 100) + '%';
+  document.getElementById('opsGauge').style.width = Math.min((ops / 1.200) * 100, 100) + '%';
 
   // Status text
   const outLabels = ['ノーアウト', '1アウト', '2アウト'];
@@ -638,6 +841,19 @@ function updateUI() {
   const basePart = baseNames.length > 0 ? 'ランナー ' + baseNames.join('') : 'ランナーなし';
   document.getElementById('statusText').textContent =
     `${outLabels[state.outs]}　${basePart}　カウント ${state.balls}-${state.strikes}`;
+
+  // Trivia
+  const trivia = TRIVIA.find(t => t.test(state));
+  const triviaCard = document.getElementById('triviaCard');
+  if (trivia) {
+    document.getElementById('triviaText').textContent = trivia.text;
+    triviaCard.classList.add('visible');
+  } else {
+    triviaCard.classList.remove('visible');
+  }
+
+  // Update chart
+  updateChart();
 }
 
 function renderDots(containerId, count, max, cls) {
@@ -648,6 +864,89 @@ function renderDots(containerId, count, max, cls) {
     dot.className = 'dot ' + cls + (i < count ? ' active' : ' inactive');
     container.appendChild(dot);
   }
+}
+
+function updateChart() {
+  // Ball progression: 0-0 -> 1-0 -> 2-0 -> 3-0
+  const ballLabels = ['0-0', '1-0', '2-0', '3-0'];
+  const ballData = ballLabels.map(k => AVG_DATA[k]);
+  // Strike progression: 0-0 -> 0-1 -> 0-2
+  const strikeLabels = ['0-0', '0-1', '0-2'];
+  const strikeData = strikeLabels.map(k => AVG_DATA[k]);
+
+  // Merge labels (union of both, padded)
+  const labels = ['0', '1', '2', '3'];
+
+  const ballSeries  = [AVG_DATA['0-0'], AVG_DATA['1-0'], AVG_DATA['2-0'], AVG_DATA['3-0']];
+  const strikeSeries = [AVG_DATA['0-0'], AVG_DATA['0-1'], AVG_DATA['0-2'], null];
+
+  const ctx = document.getElementById('countChart').getContext('2d');
+  if (countChart) {
+    countChart.data.datasets[0].data = ballSeries;
+    countChart.data.datasets[1].data = strikeSeries;
+    countChart.update('none');
+    return;
+  }
+
+  countChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'ボール増加時',
+          data: ballSeries,
+          borderColor: '#4caf50',
+          backgroundColor: 'rgba(76,175,80,0.1)',
+          pointBackgroundColor: '#4caf50',
+          tension: 0.3,
+          spanGaps: false
+        },
+        {
+          label: 'ストライク増加時',
+          data: strikeSeries,
+          borderColor: '#ffeb3b',
+          backgroundColor: 'rgba(255,235,59,0.08)',
+          pointBackgroundColor: '#ffeb3b',
+          tension: 0.3,
+          spanGaps: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: '#888', font: { size: 11 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (v === null) return '';
+              return ctx.dataset.label + ': .' + Math.round(v * 1000).toString().padStart(3,'0');
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#666' },
+          grid: { color: '#1a1a2e' },
+          title: { display: true, text: 'カウント数', color: '#555', font: { size: 10 } }
+        },
+        y: {
+          ticks: {
+            color: '#666',
+            callback: v => '.' + Math.round(v * 1000).toString().padStart(3,'0')
+          },
+          grid: { color: '#1a1a2e' },
+          min: 0.10,
+          max: 0.42
+        }
+      }
+    }
+  });
 }
 
 // ===== TABS =====
@@ -661,63 +960,6 @@ function switchTab(name) {
 }
 
 // ===== BUILD TABLES =====
-// 2025年セリーグ通年データ (nf3.sakura.ne.jp)
-const RISP_PLAYERS = []; // removed
-/*
-  {name:"キャベッジ",team:"巨人",    avg:0.364, risp:0.400},
-  {name:"牧 秀悟",  team:"DeNA",    avg:0.357, risp:0.000},
-  {name:"福永 裕基", team:"中日",    avg:0.333, risp:0.333},
-  {name:"度会 隆輝", team:"DeNA",    avg:0.333, risp:0.000},
-  {name:"泉口 友汰", team:"巨人",    avg:0.310, risp:0.375},
-  {name:"細川 成也", team:"中日",    avg:0.310, risp:0.500},
-  {name:"村松 開人", team:"中日",    avg:0.304, risp:0.333},
-  {name:"ファビアン",team:"広島",    avg:0.296, risp:0.500},
-  {name:"佐野 恵太", team:"DeNA",    avg:0.294, risp:0.385},
-  {name:"近本 光司", team:"阪神",    avg:0.290, risp:0.286},
-  {name:"中野 拓夢", team:"阪神",    avg:0.290, risp:0.250},
-  {name:"伊藤 琉偉", team:"ヤクルト",avg:0.280, risp:0.222},
-  {name:"坂倉 将吾", team:"広島",    avg:0.278, risp:0.400},
-  {name:"ダルベック",team:"巨人",    avg:0.269, risp:0.286},
-  {name:"田中 幹也", team:"中日",    avg:0.267, risp:0.333},
-  {name:"菊池 涼介", team:"広島",    avg:0.250, risp:0.000},
-  {name:"岩田 幸宏", team:"ヤクルト",avg:0.222, risp:0.286},
-  {name:"岡林 勇希", team:"中日",    avg:0.222, risp:0.000},
-  {name:"オスナ",   team:"ヤクルト",avg:0.214, risp:0.091},
-  {name:"松本 剛",  team:"巨人",    avg:0.214, risp:0.500},
-  {name:"岸田 行倫", team:"巨人",    avg:0.208, risp:0.250},
-  {name:"長岡 秀樹", team:"ヤクルト",avg:0.207, risp:0.250},
-  {name:"ヒュンメル",team:"DeNA",   avg:0.190, risp:0.333},
-  {name:"小園 海斗", team:"広島",    avg:0.185, risp:0.200},
-  {name:"佐々木 泰", team:"広島",    avg:0.179, risp:0.000},
-  {name:"サンタナ", team:"ヤクルト",avg:0.167, risp:0.500},
-  {name:"大山 悠輔", team:"阪神",    avg:0.160, risp:0.000},
-  {name:"サノー",   team:"中日",    avg:0.107, risp:0.125},
-  {name:"中村 奨成", team:"広島",    avg:0.074, risp:0.000}
-]; */
-
-function fmtAvg(v) {
-  if (v === 0) return '.000';
-  return '.' + Math.round(v * 1000).toString().padStart(3, '0');
-}
-
-function buildRispTable() {
-  const tbody = document.getElementById('rispTable');
-  RISP_PLAYERS.forEach(p => {
-    const diff = p.risp - p.avg;
-    const diffStr = (diff >= 0 ? '+' : '-') + '.' + Math.abs(Math.round(diff * 1000)).toString().padStart(3, '0');
-    const diffColor = diff > 0.05 ? '#f48fb1' : diff < -0.05 ? '#ef9a9a' : '#888';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="text-align:left;padding-left:10px;">${p.name}</td>
-      <td style="font-size:0.72rem;color:#aaa;">${p.team}</td>
-      <td class="val-avg">${fmtAvg(p.avg)}</td>
-      <td style="color:#f48fb1;font-weight:bold;">${fmtAvg(p.risp)}</td>
-      <td style="color:${diffColor};font-weight:bold;font-size:0.8rem;">${diffStr}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
 function buildCountTable() {
   const counts = [
     '0-0','1-0','2-0','3-0',
@@ -770,7 +1012,6 @@ function buildREMatrix() {
     const vals = RE_DATA[key];
     const tr = document.createElement('tr');
     const cells = vals.map((v, i) => {
-      const pct = Math.round((v / maxRE) * 100);
       const isHigh = v >= 1.5;
       const cls = isHigh ? 'val-re-hi' : 'val-re';
       return `<td class="${cls}">${v.toFixed(3)}</td>`;
@@ -780,9 +1021,13 @@ function buildREMatrix() {
   });
 }
 
+function fmtAvg(v) {
+  if (v === 0) return '.000';
+  return '.' + Math.round(v * 1000).toString().padStart(3, '0');
+}
+
 // Init
 updateUI();
-buildRispTable();
 buildCountTable();
 buildREMatrix();
 </script>
