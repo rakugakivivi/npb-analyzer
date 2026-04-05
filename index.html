@@ -499,6 +499,13 @@ const RISP_AVG_DATA = {
   '3-0': 0.333, '2-2': 0.202, '3-1': 0.375, '3-2': 0.294
 };
 
+// Runner state AVG multiplier (ProbSpace final result)
+const BASE_AVG = {
+  '---': 0.244, '1--': 0.253, '-2-': 0.268, '--3': 0.341,
+  '12-': 0.257, '1-3': 0.236, '-23': 0.222, '123': 0.304
+};
+const BASE_AVG_BASELINE = 0.252; // league avg (no runner adjustment baseline)
+
 function getRispAvg(countKey) {
   return RISP_AVG_DATA[countKey] || AVG_DATA[countKey];
 }
@@ -577,11 +584,13 @@ function updateUI() {
   const re = RE_DATA[baseKey][state.outs];
   const slg = SLG_DATA[countKey];
 
-  // 得点圏判定: 2塁 or 3塁にランナーがいれば得点圏打率を使用
+  // Runner-adjusted batting average
   const isRISP = state.bases[1] || state.bases[2]; // 2塁 or 3塁
+  const baseAvgFactor = BASE_AVG[baseKey] / BASE_AVG_BASELINE; // runner state multiplier
   const normalAvg = AVG_DATA[countKey];
   const rispAvg   = getRispAvg(countKey);
-  const avg = isRISP ? rispAvg : normalAvg;
+  const baseCountAvg = isRISP ? rispAvg : normalAvg;
+  const avg = Math.min(0.999, baseCountAvg * baseAvgFactor); // adjust by runner state
 
   document.getElementById('reValue').textContent = re.toFixed(3);
   document.getElementById('avgValue').textContent = '.' + Math.round(avg * 1000).toString().padStart(3, '0');
